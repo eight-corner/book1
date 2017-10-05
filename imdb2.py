@@ -4,10 +4,6 @@ import re
 from nltk.corpus import stopwords
 from Log import *
 
-train = pd.read_csv('/home/ys/PycharmProjects/book1/Datasets/IMDB/labeledTrainData.tsv', delimiter='\t')
-test = pd.read_csv('/home/ys/PycharmProjects/book1/Datasets/IMDB/testData.tsv', delimiter='\t')
-# print(train.info)
-
 
 def review_to_text(review, remove_stopwords):
     raw_text = BeautifulSoup(review, 'html').get_text()
@@ -23,48 +19,60 @@ def review_to_text(review, remove_stopwords):
     return words
 
 
-X_train = []
+if __name__ == '__main__':
 
-for review in train['review']:
-    X_train.append(' '.join(review_to_text(review, True)))
+    train = pd.read_csv('/home/ys/PycharmProjects/book1/Datasets/IMDB/labeledTrainData.tsv', delimiter='\t')
+    test = pd.read_csv('/home/ys/PycharmProjects/book1/Datasets/IMDB/testData.tsv', delimiter='\t')
+    # print(train.info)
 
-y_train = train['sentiment']
 
-X_test = []
+    X_train = []
 
-for review in test['review']:
-    X_test.append(' '.join(review_to_text(review, True)))
+    for review in train['review']:
+        X_train.append(' '.join(review_to_text(review, True)))
 
-from sklearn.feature_extraction.text import CountVectorizer,  TfidfTransformer, TfidfVectorizer
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.pipeline import Pipeline
-from sklearn.model_selection import GridSearchCV
+    y_train = train['sentiment']
 
-# pip_tfidf = Pipeline([('tfidf_vec', TfidfVectorizer(analyzer='word')), ('mnb', MultinomialNB())])
-# params_tfidf = {'tfidf_vec__binary':[True, False], 'tfidf_vec__ngram_range':[(1, 1), (1, 2)], 'mnb__alpha':[0.1, 1.0, 10.0]}
+    X_test = []
 
-pip_tfidf = Pipeline([
-    ('vect', CountVectorizer()),
-    ('tfidf', TfidfTransformer()),
-    ('mnb', MultinomialNB()),
-])
+    for review in test['review']:
+        X_test.append(' '.join(review_to_text(review, True)))
 
-params_tfidf = {'vect__max_df': (0.5, 0.75, 1.0),
-                'vect__max_features': (None, 5000, 10000, 50000),
-                'vect__ngram_range': ((1, 1), (1, 2)),  # unigrams or bigrams
-                'tfidf__use_idf': (True, False),
-                'tfidf__norm': ('l1', 'l2'),
-                'mnb__alpha': (0.1, 1.0, 10.0)}
+    from sklearn.feature_extraction.text import CountVectorizer,  TfidfTransformer, TfidfVectorizer
+    from sklearn.naive_bayes import MultinomialNB
+    from sklearn.pipeline import Pipeline
+    from sklearn.model_selection import GridSearchCV
 
-logger.info("begin grid......")
-gs_tfidf = GridSearchCV(pip_tfidf, params_tfidf, cv=4, n_jobs=-1, verbose=1)
-gs_tfidf.fit(X_train, y_train)
+    # pip_tfidf = Pipeline([('tfidf_vec', TfidfVectorizer(analyzer='word')), ('mnb', MultinomialNB())])
+    # params_tfidf = {'tfidf_vec__binary':[True, False], 'tfidf_vec__ngram_range':[(1, 1), (1, 2)], 'mnb__alpha':[0.1, 1.0, 10.0]}
 
-logger.info(gs_tfidf.best_score_)
-logger.info(gs_tfidf.best_params_)
-tfidf_y_predict = gs_tfidf.predict(X_test)
-logger.info(gs_tfidf.best_score_)
-logger.info("end grid......")
+    pip_tfidf = Pipeline([
+        ('vect', CountVectorizer()),
+        ('tfidf', TfidfTransformer()),
+        ('mnb', MultinomialNB()),
+    ])
 
-# submission_tfidf = pd.DataFrame({'id': test['id'], 'sentiment': tfidf_y_predict})
-# submission_tfidf.to_csv('./Datasets/IMDB/submission_tfidf.csv', index=False)
+    # params_tfidf = {'vect__max_df': (0.5, 0.75, 1.0),
+    #                 'vect__max_features': (None, 5000, 10000, 50000),
+    #                 'vect__ngram_range': ((1, 1), (1, 2)),  # unigrams or bigrams
+    #                 'tfidf__use_idf': (True, False),
+    #                 'tfidf__norm': ('l1', 'l2'),
+    #                 'mnb__alpha': (0.1, 1.0, 10.0)}
+    params_tfidf = {'vect__max_df': (0.5, 0.75, 1.0),
+                    'vect__ngram_range': ((1, 1), (1, 2)),  # unigrams or bigrams
+                    'tfidf__use_idf': (True, False),
+                    'tfidf__norm': ('l1', 'l2'),
+                    'mnb__alpha': (0.1, 1.0, 10.0)}
+
+    logger.info("begin grid......")
+    gs_tfidf = GridSearchCV(pip_tfidf, params_tfidf, cv=3, n_jobs=-1, verbose=1)
+    gs_tfidf.fit(X_train, y_train)
+
+    logger.info(gs_tfidf.best_score_)
+    logger.info(gs_tfidf.best_params_)
+    tfidf_y_predict = gs_tfidf.predict(X_test)
+    logger.info(gs_tfidf.best_score_)
+    logger.info("end grid......")
+
+    # submission_tfidf = pd.DataFrame({'id': test['id'], 'sentiment': tfidf_y_predict})
+    # submission_tfidf.to_csv('./Datasets/IMDB/submission_tfidf.csv', index=False)
